@@ -2,222 +2,189 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>雅思智能练习看板 - 长卷组卷版</title>
+    <title>雅思连贯机考系统 - 增强记录版</title>
     <style>
-        :root { --primary: #2563eb; --success: #22c55e; --bg: #f1f5f9; }
+        :root { --primary: #2563eb; --success: #22c55e; --danger: #ef4444; --bg: #f8fafc; }
         body { font-family: system-ui, sans-serif; margin: 0; display: flex; background: var(--bg); height: 100vh; overflow: hidden; }
         
-        /* 侧边栏样式 */
-        #sidebar { width: 300px; background: #fff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.05); }
-        .stats-card { background: var(--primary); color: #fff; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
-        .stats-num { font-size: 32px; font-weight: bold; }
-        .btn-random { background: #f59e0b; color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; margin-bottom: 10px; }
+        /* 侧边栏 */
+        #sidebar { width: 280px; background: #fff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.05); }
+        .stats-card { background: var(--primary); color: #fff; padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+        .btn-random { background: #f59e0b; color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 10px; transition: 0.2s; }
+        .btn-random:hover { background: #d97706; }
         
-        /* 主区域样式 */
-        #main-content { flex: 1; overflow-y: auto; padding: 30px; }
-        .filter-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-        .tab { padding: 8px 16px; background: #fff; border-radius: 20px; cursor: pointer; border: 1px solid #ddd; }
-        .tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        /* 清空按钮样式 */
+        .btn-clear { background: #fff; color: var(--danger); border: 1px solid var(--danger); padding: 8px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-top: 20px; transition: 0.2s; }
+        .btn-clear:hover { background: var(--danger); color: #fff; }
         
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
-        .card { background: #fff; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0; cursor: pointer; transition: 0.2s; position: relative; }
-        .card:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .card .count-tag { position: absolute; top: 10px; right: 10px; font-size: 11px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #64748b; }
+        /* 主视图 */
+        #main-content { flex: 1; overflow-y: auto; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 15px; }
+        .card { background: #fff; border-radius: 10px; padding: 15px; border: 1px solid #e2e8f0; cursor: pointer; position: relative; }
         .card.done { border-top: 4px solid var(--success); }
+        .card .count-badge { position: absolute; top: 10px; right: 10px; font-size: 10px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #64748b; }
 
-        /* 全屏长卷组卷浮层 (关键改变) */
-        #exam-overlay { position: fixed; inset: 0; background: #f8fafc; z-index: 2000; display: none; flex-direction: column; overflow-y: auto; } /* 增加 overflow-y: auto */
-        .exam-nav { background: #1e293b; color: #fff; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 2100; }
+        /* 考试大浮层 */
+        #exam-overlay { position: fixed; inset: 0; background: #fff; z-index: 2000; display: none; flex-direction: column; }
+        .exam-nav { background: #1e293b; color: #fff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
         
-        /* 拼图式 iframe 容器 */
-        #exam-multi-container { padding: 20px; display: flex; flex-direction: column; gap: 40px; } /* gap 增加每 Part 间距 */
-        .single-part-box { background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        .single-part-box h3 { border-left: 5px solid var(--primary); padding-left: 10px; margin-top: 0; }
-        
-        /* 长卷版 iframe 样式 */
-        iframe { width: 100%; height: 75vh; border: 1px solid #eee; border-radius: 8px; } /* 固定高度，支持长滑轮滚动 */
+        #control-bar { background: #fff; border-bottom: 2px solid #eee; padding: 15px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .part-switcher { display: flex; gap: 10px; }
+        .nav-btn { padding: 8px 25px; border: 1px solid #ddd; background: #f8fafc; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .nav-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+        #iframe-container { flex: 1; position: relative; background: #eee; }
+        iframe { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; display: none; }
+        iframe.active { display: block; }
     </style>
 </head>
 <body>
 
 <div id="sidebar">
-    <h2 style="margin-top:0">📊 学习数据</h2>
+    <h3 style="margin-top:0">📊 学习数据</h3>
     <div class="stats-card">
-        <div style="font-size:14px; opacity:0.8">总练习次数</div>
-        <div class="stats-num" id="total-count-display">0</div>
+        <div style="font-size:12px; opacity:0.8">累计练习次数</div>
+        <div style="font-size:28px; font-weight:bold;" id="total-display">0</div>
     </div>
     
-    <button class="btn-random" onclick="randomExamSession()">🎲 生成全套模拟卷 (P1-P4)</button>
-    <div id="part-stats" style="font-size: 14px; color: #64748b; line-height: 2;"></div>
-    
-    <div style="margin-top: auto; font-size: 12px; color: #94a3b8; text-align: center;">
-        数据实时保存在本地浏览器
-    </div>
+    <button class="btn-random" onclick="startFullMock()">🎲 生成 P1-P4 模拟全套</button>
+    <div id="part-stats" style="font-size: 13px; line-height: 2; color: #64748b;"></div>
+
+    <button class="btn-clear" onclick="clearHistory()">🗑️ 清空做题次数</button>
 </div>
 
 <div id="main-content">
-    <div class="filter-tabs">
-        <div class="tab active" onclick="setFilter('ALL', this)">全部题库</div>
-        <div class="tab" onclick="setFilter('P1', this)">Part 1</div>
-        <div class="tab" onclick="setFilter('P2', this)">Part 2</div>
-        <div class="tab" onclick="setFilter('P3', this)">Part 3</div>
-        <div class="tab" onclick="setFilter('P4', this)">Part 4</div>
-    </div>
-    <div class="grid" id="quiz-grid"></div>
+    <div id="quiz-grid" class="grid"></div>
 </div>
 
 <div id="exam-overlay">
     <div class="exam-nav">
-        <span style="font-weight:bold; font-size:18px;">雅思听力全套模考 Session</span>
-        <button onclick="closeExamSession()" style="background:#ef4444; color:#fff; border:none; padding:8px 20px; border-radius:6px; cursor:pointer; font-weight:bold;">退出全套练习</button>
+        <span id="exam-title">雅思连贯机考模式</span>
+        <button onclick="exitExam()" style="background:var(--danger); color:#fff; border:none; padding:6px 15px; border-radius:4px; cursor:pointer;">退出</button>
     </div>
-    
-    <div id="audio-session-box" style="background:#fff; border-bottom:1px solid #eee; padding:20px; text-align:center; position:sticky; top:65px; z-index:2050;">
-        <p style="margin:0 0 10px 0; color:#666; font-size:14px;">音频选择区 (点击播放对应音频)：</p>
-        <div id="audio-btns-group" style="display:flex; gap:10px; justify-content:center;"></div>
+    <div id="control-bar">
+        <div style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 20px;">
+            <span id="audio-label" style="font-size: 14px; color: var(--success); font-weight: bold;">就绪</span>
+            <audio id="global-player" controls style="width: 50%;"></audio>
+        </div>
+        <div class="part-switcher" id="nav-btns"></div>
     </div>
-    
-    <div id="exam-multi-container"></div>
+    <div id="iframe-container"></div>
 </div>
 
 <script src="database.js"></script>
 <script>
-    let filter = 'ALL';
-    // 基础历史记录
+    let sessionData = [];
+    let currentPlayingIdx = 0;
     let history = JSON.parse(localStorage.getItem('ielts_history_v2')) || {};
-    let totalExams = parseInt(localStorage.getItem('ielts_total_sessions')) || 0;
 
     function render() {
-        // 更新侧边栏
-        document.getElementById('total-count-display').innerText = totalExams;
-        updatePartStats();
-
-        // 渲染卡片
         const grid = document.getElementById('quiz-grid');
         grid.innerHTML = '';
-        const data = filter === 'ALL' ? questionBank : questionBank.filter(q => q.part === filter);
-
-        data.forEach(item => {
+        
+        let totalCount = 0;
+        questionBank.forEach(item => {
             const count = history[item.title] || 0;
+            totalCount += count;
             const card = document.createElement('div');
             card.className = `card ${count > 0 ? 'done' : ''}`;
-            card.onclick = () => openExamSession([item]); // 兼容单选模式，把它变成只有一个元素的数组
+            card.onclick = () => { sessionData = [item]; openOverlay(); };
             card.innerHTML = `
-                <div class="count-tag">练习 ${count} 次</div>
-                <div style="color:var(--primary); font-size:12px; font-weight:bold; margin-bottom:5px;">${item.part}</div>
-                <div style="font-weight:600; font-size:15px;">${item.title}</div>
+                <div class="count-badge">练过 ${count} 次</div>
+                <small style="color:var(--primary); font-weight:bold">${item.part}</small>
+                <div style="font-weight:bold; margin-top:5px;">${item.title}</div>
             `;
             grid.appendChild(card);
         });
+        
+        document.getElementById('total-display').innerText = totalCount;
+        updatePartStats();
     }
 
-    // 2. 长卷版组卷逻辑 (关键更新)
-    function openExamSession(paperArray) {
-        const container = document.getElementById('exam-multi-container');
-        const audioGroup = document.getElementById('audio-btns-group');
-        container.innerHTML = '';
-        audioGroup.innerHTML = '';
-        
-        // 记录历史和增加次数 (针对多卷模式进行循环记录)
-        totalExams++;
-        localStorage.setItem('ielts_total_sessions', totalExams);
-
-        paperArray.forEach((item, index) => {
-            // 记录每一Part的历史
-            history[item.title] = (history[item.title] || 0) + 1;
-            
-            // 1. 创建音频选择按钮
-            const aBtn = document.createElement('button');
-            aBtn.className = 'tab';
-            aBtn.style.background = index === 0 ? 'var(--primary)' : '#fff'; // 默认高亮Part 1
-            aBtn.style.color = index === 0 ? '#fff' : '#000';
-            aBtn.innerText = `播放 Part ${item.part.replace('P','')}`;
-            aBtn.onclick = () => playAudio(item.audio, aBtn);
-            audioGroup.appendChild(aBtn);
-
-            // 2. 创建题目拼图块 (iframe 容器)
-            const partBox = document.createElement('div');
-            partBox.className = 'single-part-box';
-            partBox.id = `part-box-${item.part}`;
-            partBox.innerHTML = `
-                <h3>${item.part}: ${item.title}</h3>
-                <iframe src="${item.html}"></iframe>
-            `;
-            container.appendChild(partBox);
-        });
-        
-        localStorage.setItem('ielts_history_v2', JSON.stringify(history));
-
-        // 显示全屏浮层
-        document.getElementById('exam-overlay').style.display = 'flex';
-        // 默认播放第一篇音频
-        playAudio(paperArray[0].audio, audioGroup.firstChild);
-    }
-
-    // 音频播放逻辑
-    function playAudio(src, activeBtn) {
-        // 先移除旧音频
-        let p = document.getElementById('ielts-session-player');
-        if(p) p.remove();
-        
-        // 增加新音频
-        const player = document.createElement('audio');
-        player.id = 'ielts-session-player';
-        player.src = src;
-        player.controls = true;
-        player.autoplay = true;
-        player.style.width = '100%';
-        player.style.marginTop = '10px';
-        activeBtn.parentNode.appendChild(player); // 播放器塞进按钮组下方
-        
-        // 更新按钮高亮
-        document.querySelectorAll('#audio-btns-group .tab').forEach(b => {
-            b.style.background = '#fff'; b.style.color = '#000';
-        });
-        activeBtn.style.background = 'var(--primary)'; activeBtn.style.color = '#fff';
-    }
-
-    // 退出模考
-    function closeExamSession() {
-        document.getElementById('exam-overlay').style.display = 'none';
-        document.getElementById('exam-multi-container').innerHTML = '';
-        document.getElementById('audio-btns-group').innerHTML = '';
-        let p = document.getElementById('ielts-session-player');
-        if(p) p.remove();
-        render(); // 刷新卡片状态
-    }
-
-    // 3. 随机抽四个 P1-P4 组成数组
-    function randomExamSession() {
-        const paper = [];
-        ['P1', 'P2', 'P3', 'P4'].forEach(p => {
-            const pool = questionBank.filter(q => q.part === p);
-            if(pool.length > 0) paper.push(pool[Math.floor(Math.random() * pool.length)]);
-        });
-        
-        if(paper.length > 0) {
-            if(paper.length < 4) alert("你的题库太少，有些Part没抽到，但我尽量给你拼出长卷了！");
-            else alert("🎲 为你随机生成了一套 4 部分的模拟卷，全屏开启，滚轮滚动即可翻页做题！");
-            openExamSession(paper);
-        }
-    }
-
-    // 基础辅助函数
     function updatePartStats() {
         const statsBox = document.getElementById('part-stats');
-        let html = '<b>进度详情：</b><br>';
-        ['P1', 'P2', 'P3', 'P4'].forEach(p => {
+        let html = '<b>各部分进度：</b><br>';
+        ['P1','P2','P3','P4'].forEach(p => {
             const total = questionBank.filter(q => q.part === p).length;
             const done = questionBank.filter(q => q.part === p && history[q.title] > 0).length;
-            html += `${p}: ${done} / ${total} 已刷<br>`;
+            html += `${p}: ${done} / ${total}<br>`;
         });
         statsBox.innerHTML = html;
     }
 
-    function setFilter(p, el) {
-        filter = p;
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        el.classList.add('active');
+    // 核心功能：清空记录
+    function clearHistory() {
+        if (confirm("确定要清空所有的做题次数记录吗？此操作不可恢复。")) {
+            history = {};
+            localStorage.removeItem('ielts_history_v2');
+            localStorage.setItem('ielts_total_sessions', '0'); // 如果有其他计数也一并归零
+            render();
+            alert("记录已全部清空，开启新一轮刷题吧！");
+        }
+    }
+
+    function startFullMock() {
+        sessionData = [];
+        ['P1','P2','P3','P4'].forEach(p => {
+            const pool = questionBank.filter(q => q.part === p);
+            if(pool.length > 0) sessionData.push(pool[Math.floor(Math.random() * pool.length)]);
+        });
+        openOverlay();
+    }
+
+    function openOverlay() {
+        const nav = document.getElementById('nav-btns');
+        const container = document.getElementById('iframe-container');
+        nav.innerHTML = '';
+        container.innerHTML = '';
+
+        sessionData.forEach((item, idx) => {
+            history[item.title] = (history[item.title] || 0) + 1;
+            const btn = document.createElement('button');
+            btn.className = `nav-btn ${idx === 0 ? 'active' : ''}`;
+            btn.innerText = `Part ${item.part.replace('P','')}`;
+            btn.onclick = () => switchTab(idx);
+            nav.appendChild(btn);
+
+            const frame = document.createElement('iframe');
+            frame.id = `frame-${idx}`;
+            frame.src = item.html;
+            if(idx === 0) frame.className = 'active';
+            container.appendChild(frame);
+        });
+
+        localStorage.setItem('ielts_history_v2', JSON.stringify(history));
+        loadAudio(0);
+        document.getElementById('exam-overlay').style.display = 'flex';
+    }
+
+    function loadAudio(idx) {
+        const player = document.getElementById('global-player');
+        const label = document.getElementById('audio-label');
+        if(!sessionData[idx]) return;
+
+        currentPlayingIdx = idx;
+        player.src = sessionData[idx].audio;
+        label.innerText = `正在播放: Part ${sessionData[idx].part}`;
+        player.play();
+
+        player.onended = function() {
+            if(currentPlayingIdx < sessionData.length - 1) {
+                loadAudio(currentPlayingIdx + 1);
+            } else {
+                label.innerText = "✅ 听力全部播放完毕";
+            }
+        };
+    }
+
+    function switchTab(idx) {
+        document.querySelectorAll('.nav-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+        document.querySelectorAll('iframe').forEach((f, i) => f.classList.toggle('active', i === idx));
+    }
+
+    function exitExam() {
+        document.getElementById('global-player').pause();
+        document.getElementById('exam-overlay').style.display = 'none';
         render();
     }
 
