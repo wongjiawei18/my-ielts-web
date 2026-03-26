@@ -2,73 +2,71 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>雅思连贯机考系统 - 增强记录版</title>
+    <title>雅思智能机考 - 优先新题版</title>
     <style>
         :root { --primary: #2563eb; --success: #22c55e; --danger: #ef4444; --bg: #f8fafc; }
         body { font-family: system-ui, sans-serif; margin: 0; display: flex; background: var(--bg); height: 100vh; overflow: hidden; }
         
-        /* 侧边栏 */
-        #sidebar { width: 280px; background: #fff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.05); }
+        /* 侧边栏与主页网格 */
+        #sidebar { width: 280px; background: #fff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; padding: 20px; }
         .stats-card { background: var(--primary); color: #fff; padding: 15px; border-radius: 12px; margin-bottom: 20px; }
-        .btn-random { background: #f59e0b; color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 10px; transition: 0.2s; }
-        .btn-random:hover { background: #d97706; }
+        .btn-random { background: #f59e0b; color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 10px; }
+        .btn-clear { background: #fff; color: var(--danger); border: 1px solid var(--danger); padding: 8px; border-radius: 6px; cursor: pointer; font-size: 11px; margin-top: 10px; }
         
-        /* 清空按钮样式 */
-        .btn-clear { background: #fff; color: var(--danger); border: 1px solid var(--danger); padding: 8px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-top: 20px; transition: 0.2s; }
-        .btn-clear:hover { background: var(--danger); color: #fff; }
-        
-        /* 主视图 */
         #main-content { flex: 1; overflow-y: auto; padding: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 15px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; }
         .card { background: #fff; border-radius: 10px; padding: 15px; border: 1px solid #e2e8f0; cursor: pointer; position: relative; }
         .card.done { border-top: 4px solid var(--success); }
-        .card .count-badge { position: absolute; top: 10px; right: 10px; font-size: 10px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #64748b; }
+        .card .count-badge { position: absolute; top: 10px; right: 10px; font-size: 10px; color: #94a3b8; }
 
-        /* 考试大浮层 */
+        /* 考试窗口 */
         #exam-overlay { position: fixed; inset: 0; background: #fff; z-index: 2000; display: none; flex-direction: column; }
-        .exam-nav { background: #1e293b; color: #fff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .exam-nav { background: #1e293b; color: #fff; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
         
-        #control-bar { background: #fff; border-bottom: 2px solid #eee; padding: 15px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        .part-switcher { display: flex; gap: 10px; }
-        .nav-btn { padding: 8px 25px; border: 1px solid #ddd; background: #f8fafc; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        /* 顶部控制台 */
+        #control-bar { background: #fff; border-bottom: 2px solid #eee; padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .timer-box { font-family: monospace; font-size: 20px; font-weight: bold; color: var(--danger); background: #fef2f2; padding: 4px 12px; border-radius: 6px; }
+        .part-switcher { display: flex; gap: 8px; }
+        .nav-btn { padding: 6px 20px; border: 1px solid #ddd; background: #f8fafc; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .nav-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
-        #iframe-container { flex: 1; position: relative; background: #eee; }
-        iframe { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; display: none; }
+        #iframe-container { flex: 1; position: relative; }
+        iframe { width: 100%; height: 100%; border: none; position: absolute; display: none; }
         iframe.active { display: block; }
     </style>
 </head>
 <body>
 
 <div id="sidebar">
-    <h3 style="margin-top:0">📊 学习数据</h3>
+    <h3 style="margin-top:0">📊 练习看板</h3>
     <div class="stats-card">
         <div style="font-size:12px; opacity:0.8">累计练习次数</div>
         <div style="font-size:28px; font-weight:bold;" id="total-display">0</div>
     </div>
-    
-    <button class="btn-random" onclick="startFullMock()">🎲 生成 P1-P4 模拟全套</button>
-    <div id="part-stats" style="font-size: 13px; line-height: 2; color: #64748b;"></div>
-
-    <button class="btn-clear" onclick="clearHistory()">🗑️ 清空做题次数</button>
+    <button class="btn-random" onclick="startFullMock()">🎲 随机全套 (优先新题)</button>
+    <div id="part-stats" style="font-size: 13px; line-height: 1.8; color: #64748b;"></div>
+    <button class="btn-clear" onclick="clearHistory()">🗑️ 清空所有记录</button>
 </div>
 
 <div id="main-content">
-    <div id="quiz-grid" class="grid"></div>
+    <div class="grid" id="quiz-grid"></div>
 </div>
 
 <div id="exam-overlay">
     <div class="exam-nav">
-        <span id="exam-title">雅思连贯机考模式</span>
-        <button onclick="exitExam()" style="background:var(--danger); color:#fff; border:none; padding:6px 15px; border-radius:4px; cursor:pointer;">退出</button>
+        <span>雅思全套模考系统</span>
+        <div class="timer-box" id="timer">00:00:00</div>
+        <button onclick="exitExam()" style="background:var(--danger); color:#fff; border:none; padding:5px 15px; border-radius:4px; cursor:pointer;">结束模考</button>
     </div>
+
     <div id="control-bar">
-        <div style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 20px;">
-            <span id="audio-label" style="font-size: 14px; color: var(--success); font-weight: bold;">就绪</span>
-            <audio id="global-player" controls style="width: 50%;"></audio>
+        <div style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 15px;">
+            <span id="audio-label" style="font-size: 13px; color: var(--success); font-weight: bold;">就绪</span>
+            <audio id="global-player" controls style="width: 45%;"></audio>
         </div>
         <div class="part-switcher" id="nav-btns"></div>
     </div>
+
     <div id="iframe-container"></div>
 </div>
 
@@ -77,72 +75,66 @@
     let sessionData = [];
     let currentPlayingIdx = 0;
     let history = JSON.parse(localStorage.getItem('ielts_history_v2')) || {};
+    let timerInterval;
+    let secondsElapsed = 0;
 
     function render() {
         const grid = document.getElementById('quiz-grid');
         grid.innerHTML = '';
-        
-        let totalCount = 0;
+        let total = 0;
         questionBank.forEach(item => {
             const count = history[item.title] || 0;
-            totalCount += count;
+            total += count;
             const card = document.createElement('div');
             card.className = `card ${count > 0 ? 'done' : ''}`;
             card.onclick = () => { sessionData = [item]; openOverlay(); };
-            card.innerHTML = `
-                <div class="count-badge">练过 ${count} 次</div>
-                <small style="color:var(--primary); font-weight:bold">${item.part}</small>
-                <div style="font-weight:bold; margin-top:5px;">${item.title}</div>
-            `;
+            card.innerHTML = `<div class="count-badge">${count}次</div><small>${item.part}</small><div style="font-weight:bold;margin-top:4px">${item.title}</div>`;
             grid.appendChild(card);
         });
-        
-        document.getElementById('total-display').innerText = totalCount;
+        document.getElementById('total-display').innerText = total;
         updatePartStats();
     }
 
     function updatePartStats() {
-        const statsBox = document.getElementById('part-stats');
-        let html = '<b>各部分进度：</b><br>';
+        const box = document.getElementById('part-stats');
+        let html = '<b>进度详情:</b><br>';
         ['P1','P2','P3','P4'].forEach(p => {
-            const total = questionBank.filter(q => q.part === p).length;
-            const done = questionBank.filter(q => q.part === p && history[q.title] > 0).length;
-            html += `${p}: ${done} / ${total}<br>`;
+            const t = questionBank.filter(q => q.part === p).length;
+            const d = questionBank.filter(q => q.part === p && history[q.title] > 0).length;
+            html += `${p}: ${d} / ${t}<br>`;
         });
-        statsBox.innerHTML = html;
+        box.innerHTML = html;
     }
 
-    // 核心功能：清空记录
-    function clearHistory() {
-        if (confirm("确定要清空所有的做题次数记录吗？此操作不可恢复。")) {
-            history = {};
-            localStorage.removeItem('ielts_history_v2');
-            localStorage.setItem('ielts_total_sessions', '0'); // 如果有其他计数也一并归零
-            render();
-            alert("记录已全部清空，开启新一轮刷题吧！");
-        }
-    }
-
+    // --- 核心更新：优先抽选没做过的题目 ---
     function startFullMock() {
         sessionData = [];
         ['P1','P2','P3','P4'].forEach(p => {
             const pool = questionBank.filter(q => q.part === p);
-            if(pool.length > 0) sessionData.push(pool[Math.floor(Math.random() * pool.length)]);
+            // 找出练习次数为 0 的题目
+            let neverDone = pool.filter(q => (history[q.title] || 0) === 0);
+            
+            // 如果有没做过的，从没做过的里抽；否则从整个池子里抽
+            let finalPool = neverDone.length > 0 ? neverDone : pool;
+            
+            if(finalPool.length > 0) {
+                sessionData.push(finalPool[Math.floor(Math.random() * finalPool.length)]);
+            }
         });
-        openOverlay();
+        
+        if(sessionData.length > 0) openOverlay();
     }
 
     function openOverlay() {
         const nav = document.getElementById('nav-btns');
         const container = document.getElementById('iframe-container');
-        nav.innerHTML = '';
-        container.innerHTML = '';
-
+        nav.innerHTML = ''; container.innerHTML = '';
+        
         sessionData.forEach((item, idx) => {
             history[item.title] = (history[item.title] || 0) + 1;
             const btn = document.createElement('button');
             btn.className = `nav-btn ${idx === 0 ? 'active' : ''}`;
-            btn.innerText = `Part ${item.part.replace('P','')}`;
+            btn.innerText = `Part ${idx + 1}`;
             btn.onclick = () => switchTab(idx);
             nav.appendChild(btn);
 
@@ -154,8 +146,9 @@
         });
 
         localStorage.setItem('ielts_history_v2', JSON.stringify(history));
-        loadAudio(0);
         document.getElementById('exam-overlay').style.display = 'flex';
+        startTimer();
+        loadAudio(0);
     }
 
     function loadAudio(idx) {
@@ -165,17 +158,47 @@
 
         currentPlayingIdx = idx;
         player.src = sessionData[idx].audio;
-        label.innerText = `正在播放: Part ${sessionData[idx].part}`;
+        label.innerText = `正在播放: Part ${idx+1}`;
         player.play();
 
         player.onended = function() {
             if(currentPlayingIdx < sessionData.length - 1) {
                 loadAudio(currentPlayingIdx + 1);
             } else {
-                label.innerText = "✅ 听力全部播放完毕";
+                label.innerText = "🛑 听力结束，正在自动交卷...";
+                autoSubmitAll();
             }
         };
     }
+
+    function autoSubmitAll() {
+        alert("听力结束！系统将自动提交所有 Part 的答案。");
+        sessionData.forEach((_, idx) => {
+            const frame = document.getElementById(`frame-${idx}`);
+            if (frame && frame.contentWindow) {
+                try {
+                    const doc = frame.contentDocument || frame.contentWindow.document;
+                    const submitBtn = doc.querySelector('button[id*="submit"], button[id*="check"], .check-button, #check_answers');
+                    if (submitBtn) submitBtn.click();
+                } catch (e) { console.warn("无法提交 Part " + (idx+1), e); }
+            }
+        });
+        stopTimer();
+    }
+
+    function startTimer() {
+        secondsElapsed = 0;
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            secondsElapsed++;
+            const h = Math.floor(secondsElapsed / 3600).toString().padStart(2, '0');
+            const m = Math.floor((secondsElapsed % 3600) / 60).toString().padStart(2, '0');
+            const s = (secondsElapsed % 60).toString().padStart(2, '0');
+            document.getElementById('timer').innerText = `${h}:${m}:${s}`;
+        }, 1000);
+    }
+
+    function stopTimer() { clearInterval(timerInterval); }
 
     function switchTab(idx) {
         document.querySelectorAll('.nav-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
@@ -183,9 +206,20 @@
     }
 
     function exitExam() {
-        document.getElementById('global-player').pause();
-        document.getElementById('exam-overlay').style.display = 'none';
-        render();
+        if(confirm("确定退出？当前计时和进度将丢失。")) {
+            stopTimer();
+            document.getElementById('global-player').pause();
+            document.getElementById('exam-overlay').style.display = 'none';
+            render();
+        }
+    }
+
+    function clearHistory() {
+        if(confirm("清空做题次数？")) {
+            history = {};
+            localStorage.removeItem('ielts_history_v2');
+            render();
+        }
     }
 
     window.onload = render;
