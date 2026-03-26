@@ -2,126 +2,127 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>雅思机考模拟平台</title>
+    <title>雅思机考练习中心</title>
     <style>
-        body { font-family: -apple-system, system-ui, sans-serif; display: flex; margin: 0; background: #f4f7f9; height: 100vh; overflow: hidden; }
-        /* 侧边栏 */
-        #sidebar { width: 300px; background: #fff; padding: 25px; border-right: 1px solid #e1e4e8; display: flex; flex-direction: column; box-shadow: 2px 0 10px rgba(0,0,0,0.05); }
-        /* 主内容区 */
-        #main { flex: 1; padding: 20px; overflow-y: auto; scroll-behavior: smooth; }
-        .card { background: #fff; padding: 20px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.07); border: 1px solid #eee; }
-        iframe { width: 100%; height: 700px; border: 1px solid #f0f0f0; border-radius: 8px; margin-top: 15px; }
-        /* 按钮样式 */
-        .btn { padding: 12px; cursor: pointer; border: none; border-radius: 8px; margin-bottom: 12px; font-weight: 600; transition: all 0.2s; }
-        .btn-blue { background: #2563eb; color: white; }
-        .btn-blue:hover { background: #1d4ed8; }
-        .btn-yellow { background: #fef08a; color: #854d0e; border: 1px solid #facc15; }
-        .btn-green { background: #22c55e; color: white; }
-        .stats { background: #f8fafc; padding: 15px; border-radius: 8px; font-size: 14px; margin-bottom: 20px; color: #475569; }
-        h2 { margin-top: 0; color: #1e293b; }
+        :root { --primary: #2563eb; --success: #22c55e; --bg: #f8fafc; }
+        body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: #1e293b; }
+        
+        /* 导航栏 */
+        .navbar { background: #fff; padding: 1rem 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: var(--primary); }
+        
+        /* 筛选器 */
+        .filters { display: flex; gap: 10px; padding: 20px; justify-content: center; background: #fff; border-bottom: 1px solid #e2e8f0; }
+        .filter-btn { padding: 8px 20px; border: 1px solid #e2e8f0; background: #fff; border-radius: 20px; cursor: pointer; transition: 0.2s; }
+        .filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+        /* 题库网格 */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; padding: 20px; max-width: 1200px; margin: 0 auto; }
+        
+        /* 题目卡片 */
+        .card { background: #fff; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; transition: 0.3s; cursor: pointer; position: relative; overflow: hidden; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .card.done { border-left: 5px solid var(--success); }
+        .card .part-tag { font-size: 12px; color: var(--primary); font-weight: bold; text-transform: uppercase; margin-bottom: 8px; display: block; }
+        .card .title { font-size: 16px; font-weight: 600; line-height: 1.4; height: 44px; overflow: hidden; }
+        .card .status-icon { position: absolute; right: 15px; bottom: 15px; color: var(--success); display: none; }
+        .card.done .status-icon { display: block; }
+
+        /* 练习模式全屏层 */
+        #exam-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 200; display: none; flex-direction: column; }
+        .exam-header { padding: 10px 20px; background: #1e293b; color: #fff; display: flex; justify-content: space-between; align-items: center; }
+        .close-btn { background: #ef4444; color: #fff; border: none; padding: 5px 15px; cursor: pointer; border-radius: 4px; }
+        iframe { width: 100%; flex: 1; border: none; }
     </style>
 </head>
 <body>
 
-<div id="sidebar">
-    <h2>雅思助手 🎧</h2>
-    <div class="stats" id="stats">载入统计中...</div>
-    <button class="btn btn-blue" onclick="startTest()">🎲 随机生成一套试卷</button>
-    <button class="btn btn-yellow" onclick="doHighlight()">🖌️ 高亮选中文字</button>
-    <button class="btn btn-green" onclick="saveAnswers()">💾 保存做题进度</button>
-    <p style="font-size: 12px; color: #94a3b8; line-height: 1.5;">* 选中题目中的文字后点击黄色按钮即可高亮。答案自动保存在本地。</p>
+<nav class="navbar">
+    <div class="logo">IELTS Practice Center</div>
+    <div id="overall-stats">已练习: 0 / 0</div>
+</nav>
+
+<div class="filters" id="filter-bar">
+    <button class="filter-btn active" onclick="filterData('ALL')">全部</button>
+    <button class="filter-btn" onclick="filterData('P1')">Part 1</button>
+    <button class="filter-btn" onclick="filterData('P2')">Part 2</button>
+    <button class="filter-btn" onclick="filterData('P3')">Part 3</button>
+    <button class="filter-btn" onclick="filterData('P4')">Part 4</button>
 </div>
 
-<div id="main">
-    <div id="exam-container">
-        <div style="text-align: center; margin-top: 100px; color: #94a3b8;">
-            <h1>Ready to practice?</h1>
-            <p>点击左侧按钮随机抽取 P1-P4 试题</p>
-        </div>
+<div class="grid" id="quiz-grid">
     </div>
+
+<div id="exam-layer">
+    <div class="exam-header">
+        <span id="current-title">正在加载...</span>
+        <button class="close-btn" onclick="closeExam()">退出练习</button>
+    </div>
+    <div id="audio-container" style="background:#f1f5f9; padding:10px; text-align:center;"></div>
+    <iframe id="exam-iframe" src=""></iframe>
 </div>
 
 <script src="database.js"></script>
 <script>
-    // 初始化本地存储
-    let userData = JSON.parse(localStorage.getItem('ielts_data')) || { count: 0, answers: {} };
+    let currentPart = 'ALL';
+    let doneList = JSON.parse(localStorage.getItem('ielts_done_list') || '[]');
 
-    function updateStats() {
-        document.getElementById('stats').innerHTML = `已练习总套数：<b style="color:#2563eb; font-size:18px;">${userData.count}</b>`;
-        localStorage.setItem('ielts_data', JSON.stringify(userData));
-    }
-
-    function startTest() {
-        const container = document.getElementById('exam-container');
-        container.innerHTML = '<h2 style="text-align:center">正在拼命组卷中...</h2>';
+    // 初始化：渲染卡片
+    function renderCards() {
+        const grid = document.getElementById('quiz-grid');
+        grid.innerHTML = '';
         
-        // 增加练习计数
-        userData.count++;
-        updateStats();
-
-        const parts = ['P1', 'P2', 'P3', 'P4'];
-        container.innerHTML = '';
+        const filtered = currentPart === 'ALL' ? questionBank : questionBank.filter(q => q.part === currentPart);
         
-        parts.forEach(p => {
-            const pool = questionBank.filter(q => q.part === p);
-            if(pool.length === 0) return;
-
-            const item = pool[Math.floor(Math.random() * pool.length)];
+        filtered.forEach(item => {
+            const isDone = doneList.includes(item.title);
+            const card = document.createElement('div');
+            card.className = `card ${isDone ? 'done' : ''}`;
+            card.onclick = () => openExam(item);
             
-            const div = document.createElement('div');
-            div.className = 'card';
-            div.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h3>Part ${p}: ${item.title}</h3>
-                    ${item.high ? '<span style="background:#fee2e2; color:#b91c1c; padding:4px 8px; border-radius:4px; font-size:12px;">🔥 高频题</span>' : ''}
-                </div>
-                <audio controls src="${item.audio}" style="width:100%; margin: 10px 0;"></audio>
-                <iframe src="${item.html}" data-id="${item.title}" id="frame-${p}"></iframe>
+            card.innerHTML = `
+                <span class="part-tag">${item.part}</span>
+                <div class="title">${item.title}</div>
+                <div class="status-icon">✔ 已完成</div>
             `;
-            container.appendChild(div);
+            grid.appendChild(card);
         });
-        document.getElementById('main').scrollTop = 0;
+
+        document.getElementById('overall-stats').innerText = `已练习: ${doneList.length} / ${questionBank.length}`;
     }
 
-    // 高亮功能
-    function doHighlight() {
-        const frames = document.querySelectorAll('iframe');
-        let highlighted = false;
-        frames.forEach(f => {
-            try {
-                const win = f.contentWindow;
-                const doc = f.contentDocument || win.document;
-                const sel = win.getSelection();
-                if (sel.rangeCount > 0 && sel.toString().length > 0) {
-                    const range = sel.getRangeAt(0);
-                    const span = doc.createElement('span');
-                    span.style.backgroundColor = '#fef08a';
-                    span.style.color = '#000';
-                    range.surroundContents(span);
-                    highlighted = true;
-                }
-            } catch (e) { console.error("无法操作 iframe，可能存在跨域问题。上传到 GitHub 后即可正常使用。"); }
+    // 筛选功能
+    function filterData(part) {
+        currentPart = part;
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.innerText.includes(part) || (part==='ALL' && btn.innerText==='全部'));
         });
-        if(!highlighted) alert("请先在题目中选中一段文字！");
+        renderCards();
     }
 
-    // 保存答案功能
-    function saveAnswers() {
-        const frames = document.querySelectorAll('iframe');
-        frames.forEach(f => {
-            const title = f.getAttribute('data-id');
-            const inputs = f.contentDocument.querySelectorAll('input[type="text"]');
-            let ans = {};
-            inputs.forEach((input, index) => {
-                ans[index] = input.value;
-            });
-            userData.answers[title] = ans;
-        });
-        localStorage.setItem('ielts_data', JSON.stringify(userData));
-        alert('答案已保存到当前浏览器！');
+    // 打开题目
+    function openExam(item) {
+        document.getElementById('current-title').innerText = item.title;
+        document.getElementById('exam-iframe').src = item.html;
+        document.getElementById('audio-container').innerHTML = `<audio src="${item.audio}" controls autoplay style="width:60%"></audio>`;
+        document.getElementById('exam-layer').style.display = 'flex';
+        
+        // 记录为已做
+        if(!doneList.includes(item.title)) {
+            doneList.push(item.title);
+            localStorage.setItem('ielts_done_list', JSON.stringify(doneList));
+        }
     }
 
-    updateStats();
+    // 关闭题目
+    function closeExam() {
+        document.getElementById('exam-layer').style.display = 'none';
+        document.getElementById('exam-iframe').src = '';
+        renderCards(); // 刷新卡片状态
+    }
+
+    // 启动
+    window.onload = renderCards;
 </script>
 </body>
 </html>
