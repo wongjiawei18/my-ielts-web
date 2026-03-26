@@ -2,127 +2,154 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>雅思机考练习中心</title>
+    <title>雅思智能练习看板</title>
     <style>
-        :root { --primary: #2563eb; --success: #22c55e; --bg: #f8fafc; }
-        body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: #1e293b; }
+        :root { --primary: #2563eb; --success: #22c55e; --bg: #f1f5f9; }
+        body { font-family: system-ui, sans-serif; margin: 0; display: flex; background: var(--bg); height: 100vh; overflow: hidden; }
         
-        /* 导航栏 */
-        .navbar { background: #fff; padding: 1rem 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-        .logo { font-size: 1.5rem; font-weight: bold; color: var(--primary); }
+        /* 左侧侧边栏：负责统计和随机功能 */
+        #sidebar { width: 300px; background: #fff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.05); }
+        .stats-card { background: var(--primary); color: #fff; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+        .stats-num { font-size: 32px; font-weight: bold; }
+        .btn-random { background: #f59e0b; color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; margin-bottom: 10px; }
         
-        /* 筛选器 */
-        .filters { display: flex; gap: 10px; padding: 20px; justify-content: center; background: #fff; border-bottom: 1px solid #e2e8f0; }
-        .filter-btn { padding: 8px 20px; border: 1px solid #e2e8f0; background: #fff; border-radius: 20px; cursor: pointer; transition: 0.2s; }
-        .filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        /* 右侧主区域：题库列表 */
+        #main-content { flex: 1; overflow-y: auto; padding: 30px; }
+        .filter-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab { padding: 8px 16px; background: #fff; border-radius: 20px; cursor: pointer; border: 1px solid #ddd; }
+        .tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .card { background: #fff; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0; cursor: pointer; transition: 0.2s; position: relative; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .card .count-tag { position: absolute; top: 10px; right: 10px; font-size: 11px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #64748b; }
+        .card.done { border-top: 4px solid var(--success); }
 
-        /* 题库网格 */
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; padding: 20px; max-width: 1200px; margin: 0 auto; }
-        
-        /* 题目卡片 */
-        .card { background: #fff; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; transition: 0.3s; cursor: pointer; position: relative; overflow: hidden; }
-        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
-        .card.done { border-left: 5px solid var(--success); }
-        .card .part-tag { font-size: 12px; color: var(--primary); font-weight: bold; text-transform: uppercase; margin-bottom: 8px; display: block; }
-        .card .title { font-size: 16px; font-weight: 600; line-height: 1.4; height: 44px; overflow: hidden; }
-        .card .status-icon { position: absolute; right: 15px; bottom: 15px; color: var(--success); display: none; }
-        .card.done .status-icon { display: block; }
-
-        /* 练习模式全屏层 */
-        #exam-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 200; display: none; flex-direction: column; }
-        .exam-header { padding: 10px 20px; background: #1e293b; color: #fff; display: flex; justify-content: space-between; align-items: center; }
-        .close-btn { background: #ef4444; color: #fff; border: none; padding: 5px 15px; cursor: pointer; border-radius: 4px; }
-        iframe { width: 100%; flex: 1; border: none; }
+        /* 考试浮层 */
+        #exam-overlay { position: fixed; inset: 0; background: #fff; z-index: 1000; display: none; flex-direction: column; }
+        .exam-nav { background: #1e293b; color: #fff; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+        iframe { flex: 1; border: none; width: 100%; }
     </style>
 </head>
 <body>
 
-<nav class="navbar">
-    <div class="logo">IELTS Practice Center</div>
-    <div id="overall-stats">已练习: 0 / 0</div>
-</nav>
-
-<div class="filters" id="filter-bar">
-    <button class="filter-btn active" onclick="filterData('ALL')">全部</button>
-    <button class="filter-btn" onclick="filterData('P1')">Part 1</button>
-    <button class="filter-btn" onclick="filterData('P2')">Part 2</button>
-    <button class="filter-btn" onclick="filterData('P3')">Part 3</button>
-    <button class="filter-btn" onclick="filterData('P4')">Part 4</button>
+<div id="sidebar">
+    <h2 style="margin-top:0">📊 学习数据</h2>
+    <div class="stats-card">
+        <div style="font-size:14px; opacity:0.8">总练习次数</div>
+        <div class="stats-num" id="total-count-display">0</div>
+    </div>
+    
+    <button class="btn-random" onclick="randomExam()">🎲 随机组卷 (P1-P4)</button>
+    <div id="part-stats" style="font-size: 14px; color: #64748b; line-height: 2;"></div>
+    
+    <div style="margin-top: auto; font-size: 12px; color: #94a3b8; text-align: center;">
+        数据实时保存在本地浏览器
+    </div>
 </div>
 
-<div class="grid" id="quiz-grid">
+<div id="main-content">
+    <div class="filter-tabs">
+        <div class="tab active" onclick="setFilter('ALL', this)">全部题库</div>
+        <div class="tab" onclick="setFilter('P1', this)">Part 1</div>
+        <div class="tab" onclick="setFilter('P2', this)">Part 2</div>
+        <div class="tab" onclick="setFilter('P3', this)">Part 3</div>
+        <div class="tab" onclick="setFilter('P4', this)">Part 4</div>
     </div>
+    <div class="grid" id="quiz-grid"></div>
+</div>
 
-<div id="exam-layer">
-    <div class="exam-header">
-        <span id="current-title">正在加载...</span>
-        <button class="close-btn" onclick="closeExam()">退出练习</button>
+<div id="exam-overlay">
+    <div class="exam-nav">
+        <span id="exam-title">测试中...</span>
+        <button onclick="closeExam()" style="background:#ef4444; color:#fff; border:none; padding:5px 15px; border-radius:4px; cursor:pointer;">退出</button>
     </div>
-    <div id="audio-container" style="background:#f1f5f9; padding:10px; text-align:center;"></div>
-    <iframe id="exam-iframe" src=""></iframe>
+    <div id="audio-player-box" style="background:#f8fafc; padding:10px; text-align:center;"></div>
+    <iframe id="exam-frame"></iframe>
 </div>
 
 <script src="database.js"></script>
 <script>
-    let currentPart = 'ALL';
-    let doneList = JSON.parse(localStorage.getItem('ielts_done_list') || '[]');
+    let filter = 'ALL';
+    // 初始化数据结构：记录每题次数 { "题目名": 次数 }
+    let history = JSON.parse(localStorage.getItem('ielts_history_v2')) || {};
+    let totalExams = parseInt(localStorage.getItem('ielts_total_sessions')) || 0;
 
-    // 初始化：渲染卡片
-    function renderCards() {
+    function render() {
+        // 更新左侧统计
+        document.getElementById('total-count-display').innerText = totalExams;
+        updatePartStats();
+
+        // 渲染右侧卡片
         const grid = document.getElementById('quiz-grid');
         grid.innerHTML = '';
-        
-        const filtered = currentPart === 'ALL' ? questionBank : questionBank.filter(q => q.part === currentPart);
-        
-        filtered.forEach(item => {
-            const isDone = doneList.includes(item.title);
+        const data = filter === 'ALL' ? questionBank : questionBank.filter(q => q.part === filter);
+
+        data.forEach(item => {
+            const count = history[item.title] || 0;
             const card = document.createElement('div');
-            card.className = `card ${isDone ? 'done' : ''}`;
+            card.className = `card ${count > 0 ? 'done' : ''}`;
             card.onclick = () => openExam(item);
-            
             card.innerHTML = `
-                <span class="part-tag">${item.part}</span>
-                <div class="title">${item.title}</div>
-                <div class="status-icon">✔ 已完成</div>
+                <div class="count-tag">练习 ${count} 次</div>
+                <div style="color:var(--primary); font-size:12px; font-weight:bold; margin-bottom:5px;">${item.part}</div>
+                <div style="font-weight:600; font-size:15px;">${item.title}</div>
             `;
             grid.appendChild(card);
         });
-
-        document.getElementById('overall-stats').innerText = `已练习: ${doneList.length} / ${questionBank.length}`;
     }
 
-    // 筛选功能
-    function filterData(part) {
-        currentPart = part;
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.innerText.includes(part) || (part==='ALL' && btn.innerText==='全部'));
+    function updatePartStats() {
+        const statsBox = document.getElementById('part-stats');
+        let html = '<b>进度详情：</b><br>';
+        ['P1', 'P2', 'P3', 'P4'].forEach(p => {
+            const total = questionBank.filter(q => q.part === p).length;
+            const done = questionBank.filter(q => q.part === p && history[q.title] > 0).length;
+            html += `${p}: ${done} / ${total} 已刷<br>`;
         });
-        renderCards();
+        statsBox.innerHTML = html;
     }
 
-    // 打开题目
     function openExam(item) {
-        document.getElementById('current-title').innerText = item.title;
-        document.getElementById('exam-iframe').src = item.html;
-        document.getElementById('audio-container').innerHTML = `<audio src="${item.audio}" controls autoplay style="width:60%"></audio>`;
-        document.getElementById('exam-layer').style.display = 'flex';
+        // 记录历史
+        history[item.title] = (history[item.title] || 0) + 1;
+        totalExams++;
+        localStorage.setItem('ielts_history_v2', JSON.stringify(history));
+        localStorage.setItem('ielts_total_sessions', totalExams);
+
+        document.getElementById('exam-title').innerText = item.title;
+        document.getElementById('exam-frame').src = item.html;
+        document.getElementById('audio-player-box').innerHTML = `<audio src="${item.audio}" controls autoplay style="width:50%"></audio>`;
+        document.getElementById('exam-overlay').style.display = 'flex';
+    }
+
+    function closeExam() {
+        document.getElementById('exam-overlay').style.display = 'none';
+        document.getElementById('exam-frame').src = '';
+        render();
+    }
+
+    function randomExam() {
+        const paper = [];
+        ['P1', 'P2', 'P3', 'P4'].forEach(p => {
+            const pool = questionBank.filter(q => q.part === p);
+            if(pool.length > 0) paper.push(pool[Math.floor(Math.random() * pool.length)]);
+        });
         
-        // 记录为已做
-        if(!doneList.includes(item.title)) {
-            doneList.push(item.title);
-            localStorage.setItem('ielts_done_list', JSON.stringify(doneList));
+        if(paper.length > 0) {
+            alert("为你随机抽取了 4 部分题目，即将开始！");
+            openExam(paper[0]); // 随机组卷先打开第一题，后续可以扩展为四题连做
         }
     }
 
-    // 关闭题目
-    function closeExam() {
-        document.getElementById('exam-layer').style.display = 'none';
-        document.getElementById('exam-iframe').src = '';
-        renderCards(); // 刷新卡片状态
+    function setFilter(p, el) {
+        filter = p;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
+        render();
     }
 
-    // 启动
-    window.onload = renderCards;
+    window.onload = render;
 </script>
 </body>
 </html>
