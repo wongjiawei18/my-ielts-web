@@ -140,6 +140,19 @@
             const frame = document.createElement('iframe');
             frame.id = `frame-${idx}`;
             frame.src = item.html;
+
+            // --- 核心改动：劫持子页面的弹窗对话框 ---
+            frame.onload = function() {
+                try {
+                    const win = frame.contentWindow;
+                    // 让 confirm 永远返回 true，alert 消失
+                    win.confirm = function() { return true; };
+                    win.alert = function() { return true; };
+                } catch (e) {
+                    console.warn("由于跨域限制，无法静默点击确认框。建议将代码部署到 GitHub Pages 使用。");
+                }
+            };
+
             if(idx === 0) frame.className = 'active';
             container.appendChild(frame);
         });
@@ -174,7 +187,6 @@
         if(currentPlayingIdx < sessionData.length - 1) loadAudio(currentPlayingIdx + 1);
     }
 
-    // --- 核心强化：暴力自动提交逻辑 ---
     function autoSubmitAll() {
         document.getElementById('audio-label').innerText = "Finishing All...";
         sessionData.forEach((_, idx) => {
@@ -185,11 +197,14 @@
                 const win = frame.contentWindow;
                 const doc = win.document;
 
+                // 强制劫持子页面的 confirm（双重保险）
+                win.confirm = function() { return true; };
+
                 // 1. 尝试触发 JS 函数
                 const funcs = ['checkAnswers', 'finishTest', 'onFinish', 'submitExam'];
                 funcs.forEach(f => { if(typeof win[f] === 'function') win[f](); });
 
-                // 2. 尝试点击按钮 (覆盖几乎所有常见的 ID 和类名)
+                // 2. 尝试点击按钮
                 const selectors = [
                     '#finish', '#submit', '.finish-button', '.check-button', '.submit-btn', 
                     'button[id*="finish"]', 'input[type="button"][value*="Finish"]',
@@ -198,18 +213,14 @@
                 
                 selectors.forEach(s => {
                     const el = doc.querySelector(s);
-                    if(el) {
-                        el.click();
-                        // 针对需要确认的弹窗，尝试模拟 Enter
-                        el.dispatchEvent(new KeyboardEvent('keydown', {'key': 'Enter'}));
-                    }
+                    if(el) el.click();
                 });
             } catch (e) {
-                console.warn(`Part ${idx+1} 自动提交受限（跨域原因）`);
+                console.warn(`Part ${idx+1} 自动提交受限`);
             }
         });
         stopTimer();
-        alert("模考听力已结束！系统已尝试自动交卷。");
+        alert("模考听力已结束！系统已尝试为您自动收卷。");
     }
 
     function startTimer() {
